@@ -3,8 +3,8 @@ import re
 from asyncio import sleep
 
 eventCategoryName = "イベント🎪🚩"
-yyyyMMddPattern = r"(\d{4}年\d{2}月\d{2}日)(.*)"
-MMddPattern = r"【(\d{2}月\d{2}日)】(.*)"
+yyyyMMddPattern = r"(\d{4})年(\d{1,2})月(\d{1,2})日"
+MMddPattern = r"(\d{1,2})月(\d{1,2})日(.*)"
 
 # インテントの生成
 intents = discord.Intents.default()
@@ -18,6 +18,59 @@ client = discord.Client(intents=intents)
 @client.event
 async def on_ready():
     print(f'We have logged in as {client.user}')
+
+# チャンネルを作成したときに呼ばれる
+@client.event
+async def on_guild_channel_create(channel):
+    await sleep(1)
+
+    # チャンネルカテゴリ取得
+    category = channel.category
+    if category.name != eventCategoryName:
+        return
+
+    # チャンネルタイトル取得
+    channelTitle = channel.name.replace("【", "").replace("】", "")
+
+    # マッチングを試みる
+    match = re.match(MMddPattern, channelTitle)
+
+    # DMを送信
+    # チャンネルを作成したユーザーのID
+    async for entry in channel.guild.audit_logs(action=discord.AuditLogAction.channel_create):
+        # entry.userがチャンネルを作成したユーザー
+        creator = entry.user
+        if entry.target.id == channel.id:
+            if match:
+                # マッチした場合は日付とテキストを返す
+                date = match.group(1) + "月" + match.group(2) + "日"
+                eventTitle = match.group(3)
+                await creator.send("ハロ～、ドクター。\n" + date +"に"+eventTitle+"を開催するのね。\n"+
+                                   "このテンプレートに沿ってイベント概要を書いてくれるかしら。\n" +
+                                   "フフ、あなたの計画が上手く行くことを願っているわ。")
+                await creator.send("--------------------------\n" +
+                                   "趣旨：\n" + 
+                                   "期限：\n" +
+                                   "日程：yyyy年MM月dd日\n" +
+                                   "場所：\n" +
+                                   "予算：\n" +
+                                   "人数：\n" +
+                                   "特記：\n" + 
+                                   "--------------------------")
+            else:
+                # マッチしなかった場合はNoneを返す       
+                await creator.send("ハロ～、ドクター。\nイベントの日程がまだ決まっていないようね。\n" + 
+                                   "後でいいから追記しておいてくれるかしら。\n" + 
+                                   "一応テンプレートも置いておくから、空欄を埋めておいてね。")
+                await creator.send("--------------------------\n" +
+                                   "趣旨：\n" + 
+                                   "期限：\n" +
+                                   "日程：yyyy年MM月dd日\n" +
+                                   "場所：\n" +
+                                   "予算：\n" +
+                                   "人数：\n" +
+                                   "特記：\n" + 
+                                   "--------------------------")
 
 # メッセージを受信した時に呼ばれる
 @client.event
@@ -56,77 +109,35 @@ async def on_message(message):
                     notes = line[len("特記："):].strip()
 
             if addGoogleCalendarFlag:
-                match = re.match(MMddPattern, message.channel.name)
-                date = match.group(1)
-                eventTitle = match.group(2)
-                year = schedule[:4]
-                month = schedule[5:7]
-                day = schedule[8:10]
-                url = "https://www.google.com/calendar/event?action=TEMPLATE" + "&text=" + eventTitle + "&details=" + message.content.replace("\n", "%0D%0A") + "&location=" + location
+                MMddMatch = re.match(MMddPattern, message.channel.name.replace("【", "").replace("】", ""))
+                yyyyMMddMatch = re.match(yyyyMMddPattern, schedule)
+                eventTitle = MMddMatch.group(3)
+                year = yyyyMMddMatch.group(1)
+                month = "{:02}".format(int(yyyyMMddMatch.group(2)))
+                day = "{:02}".format(int(yyyyMMddMatch.group(3)))
+                url = "https://www.google.com/calendar/event?action=TEMPLATE" + "&text=" + eventTitle + "&dates=" + year + month + day +  "/" + year + month + day + "&details=" + message.content.replace("\n", "%0D%0A") + "&location=" + location
                 if message.guild:
                     all_members = message.guild.members
                     for member in all_members:
                         if not member.name == "ロドス宴会部長":
                             try:
-                                await member.send("ハロ～、ドクター。\n" + date +"に" + eventTitle + "が開催されるらしいわ。\n"+
+                                await member.send("ハロ～、ドクター。\n" + month + "月" + day + "日" +"に" + eventTitle + "が開催されるらしいわ。\n"+
                                                   "忘れないうちにカレンダーにさっさと登録しちゃいましょう。")
                                 await member.send(url)
                             except discord.Forbidden:
                                 # 送信が失敗した場合、Forbidden例外が発生します（通常、DMを許可していない場合）
                                 print(f"Could not send DM to {member.display_name}")
 
-                
-
-@client.event
-async def on_guild_channel_create(channel):
-    await sleep(1)
-
-    # チャンネルカテゴリ取得
-    category = channel.category
-    if category.name != eventCategoryName:
-        return
-
-    # チャンネルタイトル取得
-    channelTitle = channel.name
-    # マッチングを試みる
-    match = re.match(MMddPattern, channelTitle)
-
-    # DMを送信
-    # チャンネルを作成したユーザーのID
-    async for entry in channel.guild.audit_logs(action=discord.AuditLogAction.channel_create):
-        # entry.userがチャンネルを作成したユーザー
-        creator = entry.user
-        if entry.target.id == channel.id:
-            if match:
-                # マッチした場合は日付とテキストを返す
-                date = match.group(1)
-                eventTitle = match.group(2)
-                await creator.send("ハロ～、ドクター。\n" + date +"に"+eventTitle+"を開催するのね。\n"+
-                                   "このテンプレートに沿ってイベント概要を書いてくれるかしら。\n" +
-                                   "フフ、あなたの計画が上手く行くことを願っているわ。")
-                await creator.send("--------------------------\n" +
-                                   "趣旨：\n" + 
-                                   "期限：\n" +
-                                   "日程：yyyy年MM月dd日\n" +
-                                   "場所：\n" +
-                                   "予算：\n" +
-                                   "人数：\n" +
-                                   "特記：\n" + 
-                                   "--------------------------")
-            else:
-                # マッチしなかった場合はNoneを返す       
-                await creator.send("ハロ～、ドクター。\nイベントの日程がまだ決まっていないようね。\n" + 
-                                   "後でいいから追記しておいてくれるかしら。\n" + 
-                                   "一応テンプレートも置いておくから、空欄を埋めておいてね。")
-                await creator.send("--------------------------\n" +
-                                   "趣旨：\n" + 
-                                   "期限：\n" +
-                                   "日程：yyyy年MM月dd日\n" +
-                                   "場所：\n" +
-                                   "予算：\n" +
-                                   "人数：\n" +
-                                   "特記：\n" + 
-                                   "--------------------------")
-
 # クライアントの実行
-client.run('YOUR_BOT_TOKEN')
+# 同一ディレクトリにトークンが記載された"Token.txt"を配置
+file_path = "token.txt"
+try:
+    with open(file_path, "r") as file:
+        token = file.read()
+except FileNotFoundError:
+    print(f"エラー: {file_path} が見つかりませんでした。")
+except Exception as e:
+    print(f"エラー: ファイルの読み込み中に問題が発生しました。")
+    print(f"詳細: {e}")
+
+client.run(token)
