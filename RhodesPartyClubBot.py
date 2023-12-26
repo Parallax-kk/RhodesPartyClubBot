@@ -1,10 +1,12 @@
 import discord
+from discord.ext import commands
 import re
 from asyncio import sleep
 
 EVENT_CATEGORY_NAME = "イベント🎪🚩"
 YYYY_MM_DD_PATTERN  = r"(\d{4})年(\d{1,2})月(\d{1,2})日"
 MM_DD_PATTERN = r"(\d{1,2})月(\d{1,2})日(.*)"
+ROLE = "宴会通知"
 
 # 【】を削除
 def remove_brackets(text):
@@ -43,10 +45,12 @@ async def send_event_template(creator):
     
 # メンバーにイベント通知を送信する
 async def notify_members(channel, url, event_title, month, day):
+    role = discord.utils.get(channel.guild.roles, name=ROLE)
+
     if channel.guild:
         all_members = channel.guild.members
         for member in all_members:
-            if not member.name == "ロドス宴会部長":
+            if not member.name == "ロドス宴会部長" and role in member.roles:
                 try:
                     await member.send(f"ハロ～、ドクター。\n{month}月{day}日に{event_title}が開催されるらしいわ。\n"
                                       "忘れないうちにカレンダーにさっさと登録しちゃいましょう。")
@@ -90,7 +94,26 @@ async def on_guild_channel_create(channel):
 async def on_message(message):
     if message.author == client.user:
         return
+    
+    # イベント通知設定
+    if message.content.startswith('/subscribe'):
+        # ロールを取得または作成
+        role = discord.utils.get(message.guild.roles, name=ROLE)
+        if role is None:
+            role = await message.guild.create_role(name=ROLE)
 
+        # ユーザーにロールを付与
+        await message.author.add_roles(role)
+        await message.author.send('あら、イベントの通知を任せてくれるのね？\nつまり、あなたはあたしがDMに書いた通りに行動するのよ、ドクター。\nほ～ら、いまさら後悔しても遅いんだからね、フフッ。')
+        await message.author.send('> 通知ロールが付与されました')
+
+    # イベント通知解除
+    if message.content.startswith('/unsubscribe'):
+        role = discord.utils.get(message.guild.roles, name=ROLE)
+        await message.author.remove_roles(role)
+        await message.author.send('> 通知ロールが削除されました')
+
+    # イベント概要検出
     if isinstance(message.channel, discord.TextChannel) and message.channel.category and message.channel.category.name == EVENT_CATEGORY_NAME:
         if "趣旨：" in message.content and "期限：" in message.content and "日程：" in message.content \
                 and "場所：" in message.content and "予算：" in message.content and "人数：" in message.content and "特記：" in message.content:
