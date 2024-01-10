@@ -13,8 +13,14 @@ MM_DD_PATTERN = r"(\d{1,2})月(\d{1,2})日(.*)"
 ROLE = "宴会通知"
 GUILD_ID = 1187676726109683722
 
-EVNT_TEMPLATE = ("--------------------------\n" + "趣旨：\n" + "期限：\n" +
-                 "日程：yyyy年MM月dd日\n" + "場所：\n" + "予算：\n" + "人数：\n" + "特記：\n" +
+EVNT_TEMPLATE = ("--------------------------\n" +
+                 "趣旨：\n" +
+                 "期限：\n" +
+                 "日程：yyyy年MM月dd日\n" +
+                 "場所：\n" +
+                 "予算：\n" +
+                 "人数：\n" +
+                 "特記：\n" +
                  "--------------------------")
 
 MSG_ADD_EVENT_WITH_DATE = ("ハロ～、ドクター。\n{date}に{event_title}を開催するのね。\n" +
@@ -29,22 +35,22 @@ MSG_SUBSCRIBE = ("あら、イベントの通知を任せてくれるのね？\n
                  "つまり、あなたはあたしがDMに書いた通りに行動するのよ、ドクター。\n" +
                  "ほ～ら、いまさら後悔しても遅いんだからね、フフッ。\n" + "> 通知ロールが付与されました")
 
-MSG_UNSUBSCRIBE = ("お仕事終了ね、先にちょこっと休むわね。\n" + "> 通知ロールが削除されました")
+MSG_UNSUBSCRIBE = ("お仕事終了ね、先にちょこっと休むわね。\n" +
+                   "> 通知ロールが削除されました")
 
-MSG_UPDATE_EVENT = ("ハロ～、ドクター。\n{month}月{day}日の{event_title}に変更があったわ。\n" +
+MSG_UPDATE_EVENT = ("ハロ～、ドクター。\n" +
+                    "{month}月{day}日の{event_title}に変更があったわ。\n" +
                     "忘れないうちに予定を更新しちゃいましょう。")
 
-MSG_ADD_EVENT_GENERAL = (
-    "ハロ～、ドクター。\n{month}月{day}日に{event_title}が開催されるらしいわ。\n" +
-    "忘れないうちにカレンダーにさっさと登録しちゃいましょう。")
+MSG_ADD_EVENT_GENERAL = ("ハロ～、ドクター。\n" +
+                         "{month}月{day}日に{event_title}が開催されるらしいわ。\n" +
+                         "忘れないうちにカレンダーにさっさと登録しちゃいましょう。")
 
-MSG_NEED_CHANGE_EVENT_TITLE = (
-    "イベントのタイトル変えてないわよ～。\n" +
-    "忘れないうちに更新して /send_notification コマンドでみんなに通知しちゃいましょう。")
+MSG_NEED_CHANGE_EVENT_TITLE = ("イベントのタイトル変えてないわよ～。\n" +
+                               "忘れないうちに更新して /send_notification コマンドでみんなに通知しちゃいましょう。")
 
-MSG_NEED_UPDATE_EVENT_GENERAL = (
-    "イベントのテンプレート書いてないわよ～。\n" +
-    "忘れないうちに更新して /send_notification コマンドでみんなに通知しちゃいましょう。")
+MSG_NEED_UPDATE_EVENT_GENERAL = ("イベントのテンプレート書いてないわよ～。\n" +
+                                 "忘れないうちに更新して /send_notification コマンドでみんなに通知しちゃいましょう。")
 
 MSG_COMPLETE_NOTIFICATION = ("ドクター、イベントの通知が完了したわ。")
 
@@ -62,16 +68,13 @@ intents.members = True
 client = discord.Client(intents=intents)
 tree = discord.app_commands.CommandTree(client)
 
-
 # 【】を削除
 def remove_brackets(text):
   return text.replace("【", "").replace("】", "")
 
-
 # 正規パターンマッチング
 def match_date_pattern(pattern, text):
   return re.match(pattern, text)
-
 
 # イベント概要検出処理
 async def handle_event_detection(message, change):
@@ -119,16 +122,9 @@ async def handle_event_detection(message, change):
       url = (
           "https://www.google.com/calendar/event?action=TEMPLATE" +
           "&text={event_title}&dates={year}{month}{day}/{year}{month}{day}" +
-          "&details={datail}&location={location}").format(
-              event_title=event_title,
-              year=year,
-              month=month,
-              day=day,
-              datail=datail,
-              location=location)
+          "&details={datail}&location={location}").format(event_title=event_title, year=year, month=month, day=day, datail=datail, location=location)
 
-      await notify_members(message.channel, url, event_title, month, day,
-                           change)
+      await notify_members(message.channel, url, event_title, month, day, change)
     return add_google_calendar_flag
 
 
@@ -137,8 +133,7 @@ async def send_event_notification(creator, match):
   if match:
     date = match.group(1) + "月" + match.group(2) + "日"
     event_title = match.group(3)
-    await creator.send(
-        MSG_ADD_EVENT_WITH_DATE.format(date=date, event_title=event_title))
+    await creator.send(MSG_ADD_EVENT_WITH_DATE.format(date=date, event_title=event_title))
   else:
     await creator.send(MSG_ADD_EVENT_WITHOUT_DATE)
 
@@ -158,15 +153,9 @@ async def notify_members(channel, url, event_title, month, day, change):
       if not member.name == "ロドス宴会部長" and role in member.roles:
         try:
           if change:
-            await member.send(
-                MSG_UPDATE_EVENT.format(month=month,
-                                        day=day,
-                                        event_title=event_title))
+            await member.send(MSG_UPDATE_EVENT.format(month=month, day=day, event_title=event_title))
           else:
-            await member.send(
-                MSG_ADD_EVENT_GENERAL.format(month=month,
-                                             day=day,
-                                             event_title=event_title))
+            await member.send(MSG_ADD_EVENT_GENERAL.format(month=month, day=day, event_title=event_title))
           await member.send(url)
         except discord.Forbidden:
           print(ERROR_MSG_CAN_NOT_SEND_DM + "!{member.display_name}")
@@ -193,8 +182,7 @@ async def on_guild_channel_create(channel):
   channel_title = remove_brackets(channel.name)
   mm_dd_match = match_date_pattern(MM_DD_PATTERN, channel_title)
 
-  async for entry in channel.guild.audit_logs(
-      action=discord.AuditLogAction.channel_create):
+  async for entry in channel.guild.audit_logs(action=discord.AuditLogAction.channel_create):
     creator = entry.user
     if entry.target.id == channel.id:
       await send_event_notification(creator, mm_dd_match)
@@ -208,9 +196,7 @@ async def on_message(message):
     return
 
   # イベント概要検出
-  elif isinstance(
-      message.channel, discord.TextChannel
-  ) and message.channel.category and message.channel.category.name == EVENT_CATEGORY_NAME:
+  elif isinstance(message.channel, discord.TextChannel) and message.channel.category and message.channel.category.name == EVENT_CATEGORY_NAME:
     await handle_event_detection(message, False)
 
 
@@ -218,9 +204,7 @@ async def on_message(message):
 @client.event
 async def on_message_edit(before, after):
   # イベント概要検出
-  if isinstance(
-      after.channel, discord.TextChannel
-  ) and after.channel.category and after.channel.category.name == EVENT_CATEGORY_NAME:
+  if isinstance(after.channel, discord.TextChannel) and after.channel.category and after.channel.category.name == EVENT_CATEGORY_NAME:
     await handle_event_detection(after, True)
 
 
@@ -237,13 +221,11 @@ async def subscribe(ctx: discord.Interaction):
         await ctx.user.add_roles(role)
         await ctx.response.send_message(MSG_SUBSCRIBE, ephemeral=True)
       except discord.Forbidden:
-        await ctx.response.send_message(ERROR_MSG_PERMISSION_DENIED,
-                                        ephemeral=True)
+        await ctx.response.send_message(ERROR_MSG_PERMISSION_DENIED, ephemeral=True)
     else:
       await ctx.response.send_message(ERROR_MSG_ROLE_NOT_FOUND, ephemeral=True)
   else:
-    await ctx.response.send_message(ERROR_MSG_GUILD_ID_MISMATCH,
-                                    ephemeral=True)
+    await ctx.response.send_message(ERROR_MSG_GUILD_ID_MISMATCH, ephemeral=True)
 
 
 # Unsubscribeコマンド
@@ -279,27 +261,22 @@ async def send_notification(ctx: discord.Interaction):
     channel_title = remove_brackets(ctx.channel.name)
     mm_dd_match = match_date_pattern(MM_DD_PATTERN, channel_title)
     if not mm_dd_match:
-      await ctx.response.send_message(MSG_NEED_CHANGE_EVENT_TITLE,
-                                      ephemeral=True)
+      await ctx.response.send_message(MSG_NEED_CHANGE_EVENT_TITLE, ephemeral=True)
       return
     else:
       async for message in ctx.channel.history():
         flag = await handle_event_detection(message, False)
 
         if flag:
-          await ctx.response.send_message(MSG_COMPLETE_NOTIFICATION,
-                                          ephemeral=True)
+          await ctx.response.send_message(MSG_COMPLETE_NOTIFICATION, ephemeral=True)
         else:
-          await ctx.response.send_message(MSG_NEED_UPDATE_EVENT_GENERAL,
-                                          ephemeral=True)
+          await ctx.response.send_message(MSG_NEED_UPDATE_EVENT_GENERAL, ephemeral=True)
   else:
     await ctx.send(ERROR_MSG_GUILD_ID_MISMATCH)
 
 
 # クライアントの実行
-keep_alive()
 TOKEN = os.getenv("TOKEN")
-try:
-    client.run(TOKEN)
-except:
-    os.system("kill 1")
+# Web サーバの立ち上げ
+keep_alive()
+client.run(TOKEN)
